@@ -2,6 +2,7 @@ package com.example;
 
 import com.example.api.ElpriserAPI;
 
+import java.rmi.ServerError;
 import java.sql.SQLOutput;
 import java.time.LocalDate;
 import java.util.*;
@@ -11,12 +12,15 @@ import static java.lang.System.*;
 public class Main {
     public static void printHelp() {
         System.out.println("""
+            
             --- Enter arguments according to the following list ---
+            
             --zone SE1|SE2|SE3|SE4
             --date YYYY-MM-DD (sets the date for price checking, if empty, current day will be selected)
             --sorted (display prices in descending order for selected date)
-            --charging 2h|4h|8h (find optimal charging windows for selected date)
+            --charging 2|4|8 (find optimal charging windows for selected date)
             --help (display usage information)
+            
             """);
     }
     public static LocalDate getDate() {
@@ -71,7 +75,6 @@ public class Main {
         }
         return timmar;
     }
-
     public static void getAveragePrice(LocalDate date, String zone, ElpriserAPI elpriserAPI) {
 
         List<ElpriserAPI.Elpris> enDagsPriser = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone));
@@ -83,6 +86,8 @@ public class Main {
         System.out.printf("\n--- Genomsnittligt pris för %s i %s: %.4f SEK/kWh ---", date, zone, prisGenomsnitt);
         System.out.println("""
                                 
+                                
+                                ------------------------------------------------------
                                 
                                 """);
     }
@@ -115,6 +120,8 @@ public class Main {
         System.out.println("""
                                 
                                 
+                                ------------------------------------------------------
+                                
                                 """);
     }
     public static void getSorted(LocalDate date, String zone, ElpriserAPI elpriserAPI) {
@@ -122,6 +129,7 @@ public class Main {
         List<ElpriserAPI.Elpris> sorted = new ArrayList<>(enDagsPriser);
         sorted.sort(Comparator.comparingDouble(ElpriserAPI.Elpris::sekPerKWh));
 
+        System.out.printf("\nPriser varje timme för %s ordnat från billigast till dyrast: \n\n", date);
         for (int i = 0; i < sorted.size(); i++) {
             String timme = sorted.get(i).timeStart().toString().substring(11, 16);
             Double pris = sorted.get(i).sekPerKWh();
@@ -130,10 +138,11 @@ public class Main {
         System.out.println("""
                                 
                                 
+                                ------------------------------------------------------
+                                
                                 """);
     }
     public static void main(String[] args) {
-
         ElpriserAPI elpriserAPI = new ElpriserAPI();
         LocalDate idag = LocalDate.now();
         Scanner scanner = new Scanner(System.in);
@@ -150,6 +159,7 @@ public class Main {
                         1. Kolla genomsnittligt pris för en dag
                         2. Hitta optimal laddningsperiod (2h, 4h eller 8h)
                         3. Visa priser sorterade för en dag
+                        4. Hjälp
                         0. Avsluta
                         """);
                 System.out.println("Ditt val: ");;
@@ -172,6 +182,9 @@ public class Main {
                         LocalDate date = getDate();
                         String zone = getZone();
                         getSorted(date, zone, elpriserAPI);
+                    }
+                    case 4 -> {
+                        printHelp();
                     }
                     case 0 -> {
                         try {
@@ -199,38 +212,57 @@ public class Main {
         String zone = null;
         LocalDate date = null;
         String charging = null;
-        String sorted = null;
+        boolean sorted = false;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--zone":
                     if (i + 1 < args.length) {
                         zone = args[++i];
-                        System.out.println("----- Zone " + args[i] + " -----");
-                    }
+                    } else System.err.println("Felaktigt värde för --zone");
                     break;
 
                 case "--date":
                     if (i + 1 < args.length) {
+                        try {
                         date = LocalDate.parse(args[++i]);
-                        System.out.println("----- Date " + args[i] + " -----");
+                        } catch (Exception e) {
+                            System.err.println("Felaktigt datum" + args[++i]);
+                            System.exit(1);
+                        }
+                    } else {
+                        System.err.println("Felaktigt värde för --date");
+                        System.exit(1);
                     }
                     break;
 
                 case "--charging":
                     if (i + 1 < args.length) {
+                        if (args[++i].equals("2") || args[++i].equals("4") || args[++i].equals("8")) {
                         charging = args[++i];
-                        System.out.println("----- Charging " + args[i] + " -----");
+                        } else {
+                            System.err.println("Felaktigt värde för --charging");
+                            System.exit(1);
+                        }
+                    } else {
+                        System.err.println("Värde saknas för --charging");
                     }
                     break;
 
                 case "--sorted":
-                    if (i + 1 < args.length) {
-                        sorted = args[++i];
-                        System.out.println("----- Sorted " + args[i] + " -----");
-                    }
+                        sorted = true;
                     break;
             }
+        }
+
+        if (zone != null && date != null && charging != null) {
+            getCheapestCharging(date, zone, elpriserAPI, Integer.parseInt(charging));
+        } else if (zone != null && date != null && sorted) {
+            getSorted(date, zone, elpriserAPI);
+        } else if (zone != null && date != null) {
+            getAveragePrice(date, zone, elpriserAPI);
+        } else {
+            printHelp();
         }
 
 
