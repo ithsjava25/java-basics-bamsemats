@@ -19,6 +19,7 @@ public class Main {
             --date YYYY-MM-DD (sets the date for price checking, if empty, current day will be selected)
             --sorted (display prices in descending order for selected date)
             --charging 2|4|8 (find optimal charging windows for selected date)
+            --minmax (shows the cheapest and most expensive hour respectively for selected date)
             --help (display usage information)
             
             """);
@@ -76,8 +77,8 @@ public class Main {
         return timmar;
     }
     public static void getAveragePrice(LocalDate date, String zone, ElpriserAPI elpriserAPI) {
-
         List<ElpriserAPI.Elpris> enDagsPriser = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone));
+
         double prisGenomsnitt = 0.0;
         for (int i = 0; i < enDagsPriser.toArray().length; i++) {
             prisGenomsnitt += enDagsPriser.get(i).sekPerKWh();
@@ -86,8 +87,6 @@ public class Main {
         System.out.printf("\n--- Genomsnittligt pris för %s i %s: %.4f SEK/kWh ---", date, zone, prisGenomsnitt);
         System.out.println("""
                                 
-                                
-                                ------------------------------------------------------
                                 
                                 """);
     }
@@ -117,6 +116,41 @@ public class Main {
 
         System.out.printf("\n--- Billigaste genomsnittspris: %,.5f SEK/kWh ---\n--- Mellan timmarna %s och %s ---\n",
                 billigasteGenomsnitt, fromHour, toHour);
+        System.out.println("""
+                                
+                                
+                                ------------------------------------------------------
+                                
+                                """);
+    }
+    public static void getCheapestAndMostExpensive(LocalDate date, String zone, ElpriserAPI elpriserAPI) {
+        List<ElpriserAPI.Elpris> enDagsPriser = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone));
+
+        double billigastePriset = 0.0;
+        double dyrastePriset = 0.0;
+        String dyrasteTimmen = "";
+        String billigasteTimmen = "";
+
+        for (int i = 0; i < enDagsPriser.size(); i++) {
+            if (billigastePriset == 0) {
+                billigastePriset =  enDagsPriser.get(i).sekPerKWh();
+                billigasteTimmen = enDagsPriser.get(i).timeStart().toString();
+            } else {
+                if (billigastePriset > enDagsPriser.get(i).sekPerKWh()) {
+                    billigastePriset = enDagsPriser.get(i).sekPerKWh();
+                    billigasteTimmen = enDagsPriser.get(i).timeStart().toString();
+                }
+            }
+        }
+        for (int i = 0; i < enDagsPriser.size(); i++) {
+            if (dyrastePriset < enDagsPriser.get(i).sekPerKWh()) {
+                dyrastePriset = enDagsPriser.get(i).sekPerKWh();
+                dyrasteTimmen = enDagsPriser.get(i).timeStart().toString();
+            }
+        }
+
+        System.out.printf("\nBilligaste priset denna dag var %s SEK/kWh klockan %s\n", billigastePriset, billigasteTimmen.substring(11, 16));
+        System.out.printf("\nDyraste priset för denna dag var %s SEK/kWh klockan %s\n", dyrastePriset, dyrasteTimmen.substring(11, 16));
         System.out.println("""
                                 
                                 
@@ -159,7 +193,8 @@ public class Main {
                         1. Kolla genomsnittligt pris för en dag
                         2. Hitta optimal laddningsperiod (2h, 4h eller 8h)
                         3. Visa priser sorterade för en dag
-                        4. Hjälp
+                        4. Visa en dags billigaste resp dyraste timme
+                        5. Hjälp
                         0. Avsluta
                         """);
                 System.out.println("Ditt val: ");;
@@ -184,6 +219,11 @@ public class Main {
                         getSorted(date, zone, elpriserAPI);
                     }
                     case 4 -> {
+                        LocalDate date = getDate();
+                        String zone = getZone();
+                        getCheapestAndMostExpensive(date, zone, elpriserAPI);
+                    }
+                    case 5 -> {
                         printHelp();
                     }
                     case 0 -> {
@@ -213,6 +253,7 @@ public class Main {
         LocalDate date = null;
         String charging = null;
         boolean sorted = false;
+        boolean minmax = false;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -231,8 +272,7 @@ public class Main {
                             System.exit(1);
                         }
                     } else {
-                        System.err.println("Felaktigt värde för --date");
-                        System.exit(1);
+                        date = LocalDate.now();
                     }
                     break;
 
@@ -249,6 +289,10 @@ public class Main {
                     }
                     break;
 
+                case "--minmax":
+                        minmax = true;
+                    break;
+
                 case "--sorted":
                         sorted = true;
                     break;
@@ -259,73 +303,14 @@ public class Main {
             getCheapestCharging(date, zone, elpriserAPI, Integer.parseInt(charging));
         } else if (zone != null && date != null && sorted) {
             getSorted(date, zone, elpriserAPI);
+        } else if (zone != null && date != null && minmax) {
+            getCheapestAndMostExpensive(date, zone, elpriserAPI);
         } else if (zone != null && date != null) {
             getAveragePrice(date, zone, elpriserAPI);
         } else {
             printHelp();
+            System.exit(1);
         }
-
-
-
-        /*if (zone == null) {
-            System.out.print("Vilken region vill du ha elpriser för (1, 2, 3 eller 4)? ");
-            String input = scanner.nextLine();
-            zone = "SE" + input;
-        }
-
-        if (date == null) {
-            System.out.println("Vilket datum vill du kolla? (YYYY-MM-DD) \n (Tomt för dagens datum) ");
-            String input = scanner.nextLine();
-            date = input.isBlank() ? idag : LocalDate.parse(input);
-        }*/
-        /*// ToDo: Här måste if-sats påbörjas, kan komma att behöva kasta om koden nedan för att passa i flow
-        //  Skapa metoder för varje 'del' som kan köras!
-        List<ElpriserAPI.Elpris> enDagsPriser = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone));
-        List<ElpriserAPI.Elpris> dagensPriser = elpriserAPI.getPriser(idag, ElpriserAPI.Prisklass.valueOf(zone));
-        List<ElpriserAPI.Elpris> morgondagensPriser = elpriserAPI.getPriser(imorgon, ElpriserAPI.Prisklass.valueOf(zone));
-
-        System.out.print("\nHur många timmar vill du ladda? ");
-        int antalTimmarLaddning = scanner.nextInt();
-
-        // ToDo: Lista ut hur man kan lägga in föredragen tid att påbörja laddning...
-        //      Stödja 2, 4 och 8 timmars laddningstid
-        //      För arguments-delen av uppgiften:
-        //          Initiera värdena som ska in som null. Följ sedan upp med if-satser
-        //          där om värdena är null, så ska interface köras (menyn laddas, etc.) annars
-        //          ska de relevanta metoderna köras.
-        System.out.print("\nVilken timme vill du börja ladda? ");
-        int startTid = scanner.nextInt();
-        //Räknar ut billigaste timmarna och den genomsnittliga kostnaden per kWh
-        double billigasteGenomsnitt = 0.0;
-        String fromHour = "";
-        String toHour = "";
-        for (int i = startTid; i < dagensPriser.toArray().length - (antalTimmarLaddning - 1); i++) {
-            double sum = 0.0;
-            for (int j = 0; j < antalTimmarLaddning; j++) {
-                sum += dagensPriser.get(i + j).sekPerKWh();
-
-            }
-            System.out.printf("\n%.4f", sum / antalTimmarLaddning);
-            if (billigasteGenomsnitt == 0.0) {
-                billigasteGenomsnitt = (sum / antalTimmarLaddning);
-                fromHour = dagensPriser.get(i).timeStart().toString().substring(11, 16);
-                toHour = dagensPriser.get(i + antalTimmarLaddning).timeStart().toString().substring(11, 16);
-            } else if (billigasteGenomsnitt > (sum / antalTimmarLaddning)) {
-                billigasteGenomsnitt = (sum / antalTimmarLaddning);
-                fromHour = dagensPriser.get(i).timeStart().toLocalTime().toString();
-                toHour = dagensPriser.get(i + antalTimmarLaddning).timeStart().toLocalTime().toString();
-            }
-        }
-        System.out.printf("Billigaste genomsnittspris: %,.5f SEK/kWh\nMellan timmarna %s och %s\n", billigasteGenomsnitt, fromHour, toHour);
-
-
-        *//* ToDo: Genomsnittligt pris för nuvarande 24-timmarsperioden
-            Hitta billigaste resp. dyraste timmen på dygnet
-            Skapa lista över alternativ (se README.md), vilken användaren svarar på för att få en specifik respons
-        *//*
-        // Printar ut tre tidpunkter och deras elpriser
-        *//* dagensPriser.stream().limit(3).forEach(pris -> System.out.printf("Tid: %s, Pris: %.4f SEK/kWh\n", pris.timeStart().toLocalTime(), pris.sekPerKWh()));
-        System.out.println(dagensPriser); */
     }
 
     // ToDo: --- Skapa metoder för repeterande sekvenser här ---
