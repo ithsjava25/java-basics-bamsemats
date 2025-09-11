@@ -98,12 +98,13 @@ public class Main {
 
         double prisGenomsnitt = 0.0;
         double sum = 0.0;
-        double minPrice = Double.parseDouble(getMinMax(date, zone, elpriserAPI)[0]);
-        double maxPrice = Double.parseDouble(getMinMax(date, zone, elpriserAPI)[1]);
-        String minHourStart = getMinMax(date, zone, elpriserAPI)[2].substring(11, 13);
-        String maxHourStart = getMinMax(date, zone, elpriserAPI)[3].substring(11, 13);
-        String minHourEnd = getMinMax(date, zone, elpriserAPI)[4].substring(11, 13);
-        String maxHourEnd = getMinMax(date, zone, elpriserAPI)[5].substring(11, 13);
+        String[] minMax = getMinMax(date, zone, elpriserAPI);
+        double minPrice = Double.parseDouble(minMax[0]);
+        double maxPrice = Double.parseDouble(minMax[1]);
+        String minHourStart = minMax[2].substring(11, 13);
+        String maxHourStart = minMax[3].substring(11, 13);
+        String minHourEnd = minMax[4].substring(11, 13);
+        String maxHourEnd = minMax[5].substring(11, 13);
 
         for (int i = 0; i < enDagsPriser.toArray().length; i++) {
             sum += enDagsPriser.get(i).sekPerKWh();
