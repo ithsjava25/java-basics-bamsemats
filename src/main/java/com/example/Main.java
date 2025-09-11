@@ -14,6 +14,7 @@ import static java.lang.System.*;
 //  Fix charging hours - they should look into up to 8 hours into the following day and find the cheapest window
 //  This will probably entail creating a new array of the given date and the following one's first hours...
 public class Main {
+    static Locale locale = new Locale("sv", "SE");
     public static void printHelp() {
         System.out.println("""
             
@@ -108,9 +109,9 @@ public class Main {
             sum += enDagsPriser.get(i).sekPerKWh();
         }
         prisGenomsnitt = sum / enDagsPriser.size();
-        System.out.printf("\n--- Lägsta pris för %s kl %s-%s i %s: %,.2f öre/kWh ---", date, minHourStart, minHourEnd, zone, minPrice*100);
-        System.out.printf("\n--- Medelpris för %s i %s: %,.2f öre/kWh ---", date, zone, prisGenomsnitt*100);
-        System.out.printf("\n--- Högsta pris för %s kl %s-%s i %s: %,.2f öre/kWh ---", date, maxHourStart, maxHourEnd, zone, maxPrice*100);
+        System.out.printf(locale, "\n--- Lägsta pris för %s kl %s-%s i %s: %,.2f öre/kWh ---", date, minHourStart, minHourEnd, zone, minPrice*100);
+        System.out.printf(locale, "\n--- Medelpris för %s i %s: %,.2f öre/kWh ---", date, zone, prisGenomsnitt*100);
+        System.out.printf(locale, "\n--- Högsta pris för %s kl %s-%s i %s: %,.2f öre/kWh ---", date, maxHourStart, maxHourEnd, zone, maxPrice*100);
         System.out.println("""
                                 
                                 
@@ -165,7 +166,7 @@ public class Main {
         fromHour = start.timeStart().toString().substring(11, 13) + ":00";
         toHour = end.timeEnd().toString().substring(11, 13) + ":00";
 
-        System.out.printf("\n--- Billigaste Medelpris för fönster: %,.2f öre / kWh ---\n--- Påbörja laddning kl %s. Avslutas kl %s ---\n",
+        System.out.printf(locale, "\n--- Billigaste Medelpris för fönster: %,.2f öre / kWh ---\n--- Påbörja laddning kl %s. Avslutas kl %s ---\n",
                 billigasteGenomsnitt * 100, fromHour, toHour);
         System.out.println("""
                                 
@@ -239,8 +240,8 @@ public class Main {
             }
         }
 
-        System.out.printf("\nLägsta pris denna dag var %s SEK/kWh klockan %s\n", billigastePriset, billigasteTimmen.substring(11, 16));
-        System.out.printf("\nHögsta pris för denna dag var %s SEK/kWh klockan %s\n", dyrastePriset, dyrasteTimmen.substring(11, 16));
+        System.out.printf(locale, "\nLägsta pris denna dag var %s SEK/kWh klockan %s\n", billigastePriset, billigasteTimmen.substring(11, 16));
+        System.out.printf(locale, "\nHögsta pris för denna dag var %s SEK/kWh klockan %s\n", dyrastePriset, dyrasteTimmen.substring(11, 16));
         System.out.println("""
                                 
                                 
@@ -253,12 +254,12 @@ public class Main {
         List<ElpriserAPI.Elpris> sorted = new ArrayList<>(enDagsPriser);
         sorted.sort(Comparator.comparingDouble(ElpriserAPI.Elpris::sekPerKWh));
 
-        System.out.printf("\nPriser varje timme för %s ordnat från billigast till dyrast: \n\n", date);
+        System.out.printf(locale, "\nPriser varje timme för %s ordnat från billigast till dyrast: \n\n", date);
         for (int i = 0; i < sorted.size(); i++) {
             String timme = sorted.get(i).timeStart().toString().substring(11, 16);
             String timmeEnd = sorted.get(i).timeEnd().toString().substring(11, 16);
             Double pris = sorted.get(i).sekPerKWh();
-            System.out.printf("%s-%s %,.2f öre \n", timme.substring(0, 2), timmeEnd.substring(0, 2), pris * 100);
+            System.out.printf(locale, "%s-%s %,.2f öre \n", timme.substring(0, 2), timmeEnd.substring(0, 2), pris * 100);
         }
         System.out.println("""
                                 
